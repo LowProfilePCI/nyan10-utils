@@ -11,7 +11,8 @@ nyan10で使う機能や便利な機能を詰め込んだSpigot用のライブ�
         <url>https://raw.github.com/LowProfilePCI/nyan10-repo/main/</url>
     </repository>
   </repositories>
-  
+```
+```xml
   <dependencies>
     <dependency>
       <groupId>moe.nyan10</groupId>
