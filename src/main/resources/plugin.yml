@@ -1,0 +1,8 @@
+name: Nyan10Utils
+version: ${project.version}
+main: moe.nyan10.utils.Nyan10Utils
+commands:
+  nyan10utils:
+    description: Nyan10Utilsのコマンドにゃ！
+    usage: /<command> <args...>
+    default: true
