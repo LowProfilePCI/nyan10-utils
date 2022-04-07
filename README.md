@@ -32,7 +32,8 @@ nyan10で使う機能や便利な機能を詰め込んだSpigot1.12.2用のラ�
 ItemStack item = Nyan10Utils.createItem(Material.RAW_FISH, "§b§lろーのごはん", "明日のお昼ご飯にゃ...", "近くのスーパーで198円だったにゃー!");
 ```
 
-#### 他にも撮るの忘れちゃったので写真はにゃいですけど、アイテム一覧のインベントリを作ったりできるにゃ！
+#### あとあと、こんにゃ感じのアイテム一覧のインベントリを作ったりできるにゃ！
+![image](https://user-images.githubusercontent.com/87465192/162094507-b50273b2-e4f6-44c5-a563-415b3a5c8bf6.png)
 ```java
 Player player = (ほにゃらら);
 List<ItemStack> items = new ArrayList<>();
