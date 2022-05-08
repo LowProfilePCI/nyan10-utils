@@ -287,21 +287,21 @@ public class Nyan10Utils extends JavaPlugin {
                             if (d>=1152921504606846976.0)
                                 if (d>=1180591620717411303424.0)
                                     if (d>=1208925819614629174706176.0)
-                                        return String.format("%.2f", d/1208925819614629174706176.0)+"Yi";
+                                        return String.format("%.2fYi", d/1208925819614629174706176.0);
                                     else
-                                        return String.format("%.2f", d/1180591620717411303424.0)+"Zi";
+                                        return String.format("%.2fZi", d/1180591620717411303424.0);
                                 else
-                                    return String.format("%.2f", d/1152921504606846976.0)+"Ei";
+                                    return String.format("%.2fEi", d/1152921504606846976.0);
                             else
-                                return String.format("%.2f", d/1125899906842624.0)+"Pi";
+                                return String.format("%.2fPi", d/1125899906842624.0);
                         else
-                            return String.format("%.2f", d/1099511627776.0)+"Ti";
+                            return String.format("%.2fTi", d/1099511627776.0);
                     else
-                        return String.format("%.2f", d/1073741824.0)+"Gi";
+                        return String.format("%.2fGi", d/1073741824.0);
                 else
-                    return String.format("%.2f", d/1048576.0)+"Mi";
+                    return String.format("%.2fMi", d/1048576.0);
             else
-                return String.format("%.2f", d/1024)+"Ki";
+                return String.format("%.2fKi", d/1024);
         else
             return String.format("%.2f", d);
     }
@@ -325,25 +325,25 @@ public class Nyan10Utils extends JavaPlugin {
                                     if (d>=1000000000000000000000000.0)
                                         if (d>=1000000000000000000000000000.0)
                                             if (d>=1000000000000000000000000000000.0)
-                                                return String.format("%.2f", d/1000000000000000000000000000000.0)+"R";
+                                                return String.format("%.2fR", d/1000000000000000000000000000000.0);
                                             else
-                                                return String.format("%.2f", d/1000000000000000000000000000.0)+"Q";
+                                                return String.format("%.2fQ", d/1000000000000000000000000000.0);
                                         else
-                                            return String.format("%.2f", d/1000000000000000000000000.0)+"Y";
+                                            return String.format("%.2fY", d/1000000000000000000000000.0);
                                     else
-                                        return String.format("%.2f", d/1000000000000000000000.0)+"Z";
+                                        return String.format("%.2fZ", d/1000000000000000000000.0);
                                 else
-                                    return String.format("%.2f", d/1000000000000000000.0)+"E";
+                                    return String.format("%.2fE", d/1000000000000000000.0);
                             else
-                                return String.format("%.2f", d/1000000000000000.0)+"P";
+                                return String.format("%.2fP", d/1000000000000000.0);
                         else
-                            return String.format("%.2f", d/1000000000000.0)+"T";
+                            return String.format("%.2fT", d/1000000000000.0);
                     else
-                        return String.format("%.2f", d/1000000000.0)+"G";
+                        return String.format("%.2fG", d/1000000000.0);
                 else
-                    return String.format("%.2f", d/1000000.0)+"M";
+                    return String.format("%.2fM", d/1000000.0);
             else
-                return String.format("%.2f", d/1000.0)+"K";
+                return String.format("%.2fK", d/1000.0);
         else
             return String.format("%.2f", d);
     }

@@ -1,6 +1,7 @@
 package moe.nyan10.utils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -26,8 +27,30 @@ public class ItemListInventory {
     private Status status;
 
 
+    /**
+     * {@link ItemListInventory#ItemListInventory(String, Player, Collection)}
+     * があるんですけど、先方互換性を保つためにあるにゃ！
+     * にゃので、処理は同じにゃ！
+     * @param title インベントリのタイトル
+     * @param player インベントリを開くプレーヤー
+     * @param origList アイテムリスト
+     * @since 1.0
+     * @see ItemListInventory#ItemListInventory(String, Player, Collection)
+     */
     public ItemListInventory(String title, Player player, List<ItemStack> origList) {
-        this.title = title;
+        this(title, player, (Collection<ItemStack>)origList);
+    }
+
+
+    /**
+     *
+     * @param title インベントリのタイトル
+     * @param player インベントリを開くプレーヤー
+     * @param origList アイテムリスト
+     * @since 1.1
+     */
+    public ItemListInventory(String title, Player player, Collection<? extends ItemStack> origList) {
+    	this.title = title;
         this.player = player;
 
         items.addAll(origList);
@@ -128,12 +151,16 @@ public class ItemListInventory {
      */
     @Deprecated
     public void select(int slot, ClickType type) {
+    	if (status == Status.CLOSED) return;
         int index = (page*45)+slot;
         if (index<0 || slot>items.size()) return;
+        status = Status.CLOSED;
         ItemStack item = items.get(index);
         ItemSelectEvent event = new ItemSelectEvent(item, index, type);
-        close();
         handler.accept(event);
+        Bukkit.getScheduler().runTaskLater(Nyan10Utils.getInstance(), () -> {
+        	player.closeInventory();
+        }, 1);
     }
 
 

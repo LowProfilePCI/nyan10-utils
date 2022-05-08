@@ -37,16 +37,16 @@ public class EventListener implements Listener {
     @SuppressWarnings("deprecation")
     @EventHandler
     public void onInventoryClicked(InventoryClickEvent event) {
-        if (event.getSlotType() != SlotType.CONTAINER)
+        if (!(event.getSlotType() == SlotType.CONTAINER  || event.getSlotType() == SlotType.QUICKBAR))
             return;
 
         Player player = (Player) event.getWhoClicked();
         ItemListInventory inv = inventories.get(player);
 
         if (inv != null) {
-            event.setCancelled(true);
             if (event.getCurrentItem().getType() == Material.AIR)
                 return;
+            event.setCancelled(true);
 
             int slot = event.getRawSlot();
             if (slot >= 0 && slot < 45) {
