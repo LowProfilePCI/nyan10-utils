@@ -19,6 +19,7 @@ nyan10で使う機能や便利な機能を詰め込んだSpigot1.12.2用のラ�
       <groupId>moe.nyan10</groupId>
       <artifactId>nyan10-utils</artifactId>
       <version>1.0</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 ```
