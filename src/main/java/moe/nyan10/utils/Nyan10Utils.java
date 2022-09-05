@@ -1,15 +1,21 @@
 package moe.nyan10.utils;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
@@ -28,6 +34,11 @@ public class Nyan10Utils extends JavaPlugin {
     private static final String PREFIX = "§7§l[§dNyan10§aUtils§7§l]§r ";
     private static Nyan10Utils instance;
     private EventListener listener = new EventListener();
+
+    private FileConfiguration config;
+    private boolean showPassword;
+    private boolean enableExecCmd;
+
     //private static PermissionManager permMgr = PermissionsEx.getPermissionManager();
 
 
@@ -36,6 +47,11 @@ public class Nyan10Utils extends JavaPlugin {
         instance = this;
 
         getServer().getPluginManager().registerEvents(listener, this);
+
+        saveDefaultConfig();
+        config = getConfig();
+        showPassword = config.getBoolean("database.show-password", false);
+        enableExecCmd = config.getBoolean("database.enable-exec-cmd", false);
     }
 
 
@@ -49,13 +65,122 @@ public class Nyan10Utils extends JavaPlugin {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("nyan10utils")) {
             if (args.length == 0) {
-                sender.sendMessage(PREFIX+"§6/nyan10utils version: バージョンを表示するにゃ！");
-
+                sender.sendMessage(
+                		PREFIX+"§6/nyan10utils version: バージョンを表示するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils show-pw [on|off]: DBのパスワード表示ポリシーを設定するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils get-db [登録名]: データベースの情報を表示するにゃ！\n"+
+    					PREFIX+"§6/nyan10utils register-db <登録名> <URL> [USER] [PW]: データベースを登録するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils remove-db <登録名>: データベースの登録を解除するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils rename-db <登録名> <新しい登録名>: データベースの登録名を変更するにゃ！\n"+
+    					(enableExecCmd ? PREFIX+"§6/nyan10utils exec-db <登録名> <SQL>: ローカルデータベースにSQLコマンドを送信するにゃ！":"")
+                );
             } else {
 
                 if (args[0].equalsIgnoreCase("version")) {
                     sender.sendMessage(PREFIX+"バージョンは§e"+getDescription().getVersion()+"§rにゃ！");
 
+                } else if (args[0].equalsIgnoreCase("show-pw") && Nyan10Utils.pCheck(sender, "nyan10utils.showpwpolicy")) {
+                	if (args.length < 2) {
+                		sender.sendMessage(PREFIX+"現在の設定：§e"+(showPassword?"on§7(表示)":"off§7(非表示)"));
+                	} else {
+                		if (sender instanceof ConsoleCommandSender) {
+	                		showPassword = args[1].equals("on");
+	                		sender.sendMessage(PREFIX+"パスワード表示を§e"+(showPassword?"on§7(表示)":"off§7(非表示)")+"§fに設定したにゃ！");
+	                		config.set("database.show-password", showPassword);
+	                		saveConfig();
+                		} else {
+                			sender.sendMessage(PREFIX+"§cこの設定はコンソールからしか変更できないにゃ(*- -)(*_ _)ペコリ");
+                		}
+                	}
+
+                } else if (args[0].equalsIgnoreCase("register-db") && Nyan10Utils.pCheck(sender, "nyan10utils.regdb")) {
+                	if (args.length < 3) {
+                		sender.sendMessage(PREFIX+"§c/nyan10utils register-db <登録名> <URL> [USER] [PW]");
+                		return true;
+                	}
+                	Database db = new Database(args[2], args.length>3?args[3]:"", args.length>4?args[4]:"");
+                	try(Connection conn = db.getConnection()) {
+                		Database.register(args[1], db);
+                		sender.sendMessage(PREFIX+"§aデータベースを登録したにゃ！(  ´∀｀)bｸﾞｯ!");
+                	} catch(SQLException e) {
+                		sender.sendMessage(PREFIX+"§cデータベースに接続できなかったのにゃ( ﾉД`)ｼｸｼｸ…");
+                		e.printStackTrace();
+                	}
+
+                } else if (args[0].equalsIgnoreCase("get-db") && Nyan10Utils.pCheck(sender, "nyan10utils.getdb")) {
+            		if (args.length < 2) {
+            			StringBuilder builder = new StringBuilder(PREFIX+"登録されているデータベース一覧にゃ！");
+                    	for(Entry<String, Database> db : Database.getAll().entrySet())
+                    		builder.append("\n§e").append(db.getKey()).append("§f: §a").append(db.getValue().getUrl());
+                    	sender.sendMessage(builder.toString());
+            			return true;
+            		}
+                	Database db = Database.get(args[1]);
+                	if (db != null) {
+	                	sender.sendMessage(
+	                			PREFIX+"データベース§e"+args[1]+"§fの設定にゃ！\n"+
+			                	PREFIX+"§bURL: §f"+db.getUrl()+"\n"+
+			                	PREFIX+"§bUser: §f"+db.getUsername()+"\n"+
+			                	PREFIX+"§bPassword: §f"+(showPassword ? db.getPassword() : "********")+"\n"
+	                	);
+                	} else {
+                		sender.sendMessage(PREFIX+"§e"+args[1]+"§cは見つからなかったにゃ(´・ω・`)");
+                	}
+
+                } else if (args[0].equalsIgnoreCase("exec-db") && Nyan10Utils.pCheck(sender, "nyan10utils.execdb")) {
+                	if (args.length < 3) {
+            			sender.sendMessage(PREFIX+"§c/nyan10utils exec-db <登録名> <SQL文>");
+            			return true;
+            		}
+                	if (enableExecCmd) {
+                		if (Database.has(args[1])) {
+                			StringBuilder builder = new StringBuilder();
+                			for(int i=2; i<args.length; i++)
+                				builder.append(args[i]).append(" ");
+                			try(Statement stmt = Database.get(args[1]).createStatement()) {
+                				String sql = builder.toString();
+                				sender.sendMessage(PREFIX+sql);
+                				if (stmt.execute(sql))
+                					sender.sendMessage(resultSetToTable(stmt.getResultSet()));
+                				else
+                					sender.sendMessage(PREFIX+"更新行数: "+stmt.getUpdateCount());
+                			} catch(Exception e) {
+                				sender.sendMessage(PREFIX+"§c"+e.getClass().getSimpleName()+": "+e.getMessage());
+                				e.printStackTrace();
+                			}
+                		} else {
+                			sender.sendMessage(PREFIX+"§cデータベース§e"+args[1]+"§cが見つからなかったにゃ...");
+                		}
+                	} else {
+                		sender.sendMessage(PREFIX+"§cこのコマンドは設定で無効にされてるにゃ！config.ymlで変更できるにゃ！");
+                	}
+
+                } else if (args[0].equalsIgnoreCase("rename-db") && Nyan10Utils.pCheck(sender, "nyan10utils.rendb")) {
+                	if (args.length < 3) {
+                		sender.sendMessage(PREFIX+"§c/nyan10utils rename-db <登録名> <新しい登録名>");
+                		return true;
+                	}
+                	Database db = Database.get(args[1]);
+                	if (db == null) {
+                		sender.sendMessage(PREFIX+"§e"+args[1]+"が見つからなかったにゃ(´・ω・`)");
+                	} else {
+                		Database.unregister(args[1]);
+                		Database.register(args[2], db);
+                		sender.sendMessage(PREFIX+"§a登録名を変更したにゃ！§e("+args[1]+"->"+args[2]+")");
+                	}
+                	
+                } else if (args[0].equalsIgnoreCase("remove-db") && Nyan10Utils.pCheck(sender, "nyan10utils.rmdb")) {
+                	if (args.length < 2) {
+                		sender.sendMessage(PREFIX+"§c/nyan10utils remove-db <登録名>");
+                		return true;
+                	}
+                	if (Database.unregister(args[1]) != null)
+                		sender.sendMessage(PREFIX+"§e"+args[1]+"§aの登録を解除したにゃ！");
+                	else
+                		sender.sendMessage(PREFIX+"§e"+args[1]+"§cが見つからなかったにゃ(´・ω・`)");
+                	
+                } else {
+                	sender.sendMessage(PREFIX+"§c使い方が間違ってるみたいにゃ.../nyan10utilsで使い方表示にゃ！");
                 }
 
             }
@@ -64,6 +189,52 @@ public class Nyan10Utils extends JavaPlugin {
     }
 
 
+    private static String resultSetToTable(ResultSet result) throws SQLException {
+    	ResultSetMetaData meta = result.getMetaData();
+    	int x=meta.getColumnCount();
+
+    	String[] columnNames = new String[x];
+    	int[] width = new int[x];
+    	for(int i=0; i<x; i++) {
+    		columnNames[i] = meta.getColumnName(i+1)+" "+meta.getColumnTypeName(i+1);
+    		width[i] = columnNames[i].length();
+    	}
+
+    	List<String[]> rows = resultSetToRows(result);
+    	int y=rows.size();
+
+    	for(String[] row : rows) {
+    		for(int i=0; i<x; i++) {
+    			if (row[i] != null && row[i].length() > width[i])
+    				width[i] = row[i].length();
+    		}
+    	}
+
+    	String[] format = new String[x];
+    	for(int i=0; i<x; i++)
+    		format[i] = "%-"+width[i]+"s|";
+
+    	StringBuilder table = new StringBuilder("§d");
+    	for(int i=0; i<x; i++)
+    		table.append(String.format(format[i], columnNames[i]));
+    	table.append("\n");
+    	for(int i=0; i<y; i++) {
+    		String[] row = rows.get(i);
+    		table.append(i%2==0 ? "§a" : "§b");
+    		for(int j=0; j<x; j++)
+    			table.append(String.format(format[j], row[j]));
+    		table.append("\n");
+    	}
+    	return table.toString();
+    }
+
+
+    /**
+     * Nyan10Utilsのイベントリスナを返すにゃー。
+     * 内部で使ってるだけにゃので使う場面は少ないはずにゃ...
+     * @return Nyan10Utilsのイベントリスナ
+     * @since 1.0
+     */
     public EventListener getEventListener() {
         return listener;
     }
@@ -76,12 +247,27 @@ public class Nyan10Utils extends JavaPlugin {
      * @param permission 権限名
      * @return 権限を持っていた場合true, 持っていなかった場合false
      * @since 1.0
-     * @see Nyan10Utils#pCheck(Player, String)
+     * @see #pCheck(CommandSender, String)
      */
     public static boolean pCheck(Player target, String permission) {
         if (target.hasPermission(permission)) return true;
         target.sendMessage(PREFIX+"§cけっ、権限が足りないにこっ(´・ω・`)§f ("+permission+")");
         return false;
+    }
+
+
+    /**
+     * 権限のチェックをして、権限がなかった場合はメッセージを送信するにゃ！
+     * OP権限を持っているかコンソールからの場合、常にtrueが返ってくるにゃ！
+     * @param target 対象のコマンド送信者
+     * @param permission 権限名
+     * @return 権限を持っているかコンソールの場合true, 持っていなかった場合false
+     * @since 1.1
+     * @see #pCheck(Player, String)
+     */
+    public static boolean pCheck(CommandSender target, String permission) {
+    	if (target instanceof ConsoleCommandSender) return true;
+    	return pCheck((Player)target, permission);
     }
 
 
@@ -93,7 +279,7 @@ public class Nyan10Utils extends JavaPlugin {
      * @param permission 権限名
      * @return 権限を持っていた場合true, 持っていなかった場合false
      * @since 1.0
-     * @see Nyan10Utils#pCheck(Player, String)
+     * @see #pCheck(Player, String)
      */
     /*
     public static boolean pCheckIgnoreOp(Player target, String permission) {
@@ -106,18 +292,34 @@ public class Nyan10Utils extends JavaPlugin {
 
     /**
      * ResultSetを行ごとのリストに変換するにゃ！
+     * メソッド名が分かりづらかったので変更したにゃ！後方互換性のために前のもあるだけにゃので、
+     * {@link #resultSetToRows(ResultSet)}を使って欲しいにゃー...
      * @param result 変換するResultSet
      * @return 行ごとのリスト
      * @throws SQLException
      * @since 1.0
      */
+    @Deprecated
     public static List<String[]> linesFromResult(ResultSet result) throws SQLException {
-        List<String[]> list = new ArrayList<String[]>();
+        return resultSetToRows(result);
+    }
+
+
+    /**
+     * ResultSetを行ごとのリストに変換するにゃ！
+     * {@link #linesFromResult(ResultSet)}と同じにゃ...
+     * @param result 変換するResultSet
+     * @return 行ごとのリスト
+     * @throws SQLException
+     * @since 1.1
+     */
+    public static List<String[]> resultSetToRows(ResultSet result) throws SQLException {
+    	List<String[]> list = new ArrayList<String[]>();
         int nColumns = result.getMetaData().getColumnCount();
         while(result.next()) {
             String[] line = new String[nColumns];
-            for(int cnt=1; cnt<=nColumns; cnt++)
-                line[cnt] = result.getString(cnt);
+            for(int cnt=0; cnt<nColumns; cnt++)
+                line[cnt] = result.getString(cnt+1);
             list.add(line);
         }
         return list;
@@ -156,7 +358,7 @@ public class Nyan10Utils extends JavaPlugin {
      * @param lore Lore(可変長)
      * @return 作成したアイテム
      * @since 1.0
-     * @see Nyan10Utils#createItem(Material, int, String, String...)
+     * @see #createItem(Material, int, String, String...)
      */
     public static ItemStack createItem(Material material, String name, String... lore) {
         ItemStack item = new ItemStack(material);
@@ -177,7 +379,7 @@ public class Nyan10Utils extends JavaPlugin {
      * @param lore Lore(可変長)
      * @return 作成したアイテム
      * @since 1.0
-     * @see Nyan10Utils#createItem(Material, String, String...)
+     * @see #createItem(Material, String, String...)
      */
     public static ItemStack createItem(Material material, int damage, String name, String... lore) {
         ItemStack item = new ItemStack(material);
@@ -225,7 +427,7 @@ public class Nyan10Utils extends JavaPlugin {
      * エンチャントがすでに付与されているアイテムに使用すると既存のエンチャントが消える可能性があります。
      * @param item きらきらさせるアイテム
      * @since 1.0
-     * @see Nyan10Utils#clearEnchants(ItemStack)
+     * @see #clearEnchants(ItemStack)
      */
     public static void makeShine(ItemStack item) {
         ItemMeta meta = item.getItemMeta();
@@ -239,7 +441,7 @@ public class Nyan10Utils extends JavaPlugin {
      * アイテムに付与されているすべてのエンチャントを削除するにゃ！
      * @param item アイテム
      * @since 1.0
-     * @see Nyan10Utils#makeShine(ItemStack)
+     * @see #makeShine(ItemStack)
      */
     public static void clearEnchants(ItemStack item) {
         ItemMeta meta = item.getItemMeta();
@@ -276,7 +478,7 @@ public class Nyan10Utils extends JavaPlugin {
      * @param d ２進接頭辞で表現する数値
      * @return dを２進接頭辞で表現した文字列
      * @since 1.0
-     * @see Nyan10Utils#siPrefix(double)
+     * @see #siPrefix(double)
      */
     public static String binaryPrefix(double d) {
         if (d>=1024.0)
@@ -312,7 +514,8 @@ public class Nyan10Utils extends JavaPlugin {
      * 少数第２位までを返すにゃ！概数を出力する際などにどうぞにゃ！
      * @param d SI接頭辞で表現する値
      * @return dをSI接頭辞で表現した文字列
-     * @see Nyan10Utils#binaryPrefix(double)
+     * @since 1.0
+     * @see #binaryPrefix(double)
      */
     public static String siPrefix(double d) {
         if (d>=1000.0)
@@ -352,31 +555,5 @@ public class Nyan10Utils extends JavaPlugin {
     public static Nyan10Utils getInstance() {
         return instance;
     }
-
-
-    /*
-    public static void main(String[] args) {
-        System.out.println(binaryPrefix(1));
-        System.out.println(binaryPrefix(1024.0));
-        System.out.println(binaryPrefix(1048576.0));
-        System.out.println(binaryPrefix(1073741824.0));
-        System.out.println(binaryPrefix(1099511627776.0));
-        System.out.println(binaryPrefix(1125899906842624.0));
-        System.out.println(binaryPrefix(1152921504606846976.0));
-        System.out.println(binaryPrefix(1180591620717411303424.0));
-        System.out.println(binaryPrefix(1208925819614629174706176.0));
-        System.out.println(siPrefix(1.0));
-        System.out.println(siPrefix(1000.0));
-        System.out.println(siPrefix(1000000.0));
-        System.out.println(siPrefix(1000000000.0));
-        System.out.println(siPrefix(1000000000000.0));
-        System.out.println(siPrefix(1000000000000000.0));
-        System.out.println(siPrefix(1000000000000000000.0));
-        System.out.println(siPrefix(1000000000000000000000.0));
-        System.out.println(siPrefix(1000000000000000000000000.0));
-        System.out.println(siPrefix(1000000000000000000000000000.0));
-        System.out.println(siPrefix(1000000000000000000000000000000.0));
-    }
-    */
 
 }

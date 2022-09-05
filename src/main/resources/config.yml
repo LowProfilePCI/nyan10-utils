@@ -1,0 +1,12 @@
+database:
+  list:
+    local: 
+      url: jdbc:sqlite:local_db.sqlite
+      user: 
+      password: 
+    remote: 
+      url: 
+      user: 
+      password: 
+  enable-exec-cmd: true
+  show-password: false

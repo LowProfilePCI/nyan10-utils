@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>moe.nyan10</groupId>
   <artifactId>nyan10-utils</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.1</version>
   <name>Nyan10Utils</name>
   <description>plugin/library for spigot 1.12.2</description>
 
@@ -32,6 +32,9 @@
             <goals>
               <goal>shade</goal>
             </goals>
+            <configuration>
+              <minimizeJar>true</minimizeJar>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -68,18 +71,16 @@
       <version>1.12.2-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
-    <!--
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>42.3.1</version>
+      <version>42.4.0</version>
     </dependency>
     <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>
       <version>3.32.3.2</version>
     </dependency>
-    -->
   </dependencies>
 
 </project>

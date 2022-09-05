@@ -2,3 +2,7 @@
 target/
 .classpath
 .project
+
+download.bat
+upload.bat
+backup.zip

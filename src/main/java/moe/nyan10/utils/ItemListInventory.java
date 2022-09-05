@@ -9,37 +9,24 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryType.SlotType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+
+import moe.nyan10.utils.internal.HookableInventory;
 
 /**
  * アイテム一覧インベントリを表示して、アイテム選択時に特定の処理を実行する便利なやつにゃ！！
  * @since 1.0
  */
-public class ItemListInventory {
+public class ItemListInventory extends HookableInventory {
 
     private List<ItemStack> items = new ArrayList<>();
     private int page;
     private int nPages;
     private String title;
     private Consumer<ItemSelectEvent> handler = item -> {};
-    private Player player;
-    private Status status;
-
-
-    /**
-     * {@link ItemListInventory#ItemListInventory(String, Player, Collection)}
-     * があるんですけど、先方互換性を保つためにあるにゃ！
-     * にゃので、処理は同じにゃ！
-     * @param title インベントリのタイトル
-     * @param player インベントリを開くプレーヤー
-     * @param origList アイテムリスト
-     * @since 1.0
-     * @see ItemListInventory#ItemListInventory(String, Player, Collection)
-     */
-    public ItemListInventory(String title, Player player, List<ItemStack> origList) {
-        this(title, player, (Collection<ItemStack>)origList);
-    }
 
 
     /**
@@ -49,17 +36,13 @@ public class ItemListInventory {
      * @param origList アイテムリスト
      * @since 1.1
      */
-    public ItemListInventory(String title, Player player, Collection<? extends ItemStack> origList) {
+    public ItemListInventory(String title, Player player, Collection<ItemStack> origList) {
+    	super(player);
     	this.title = title;
-        this.player = player;
 
         items.addAll(origList);
         int nItems = items.size();
         nPages = nItems/45 + ((nItems%45==0) ? 0 : 1);
-
-        Nyan10Utils.getInstance().getEventListener().hook(player, this);
-        openCurrentPage();
-        status = Status.OPEN;
     }
 
 
@@ -82,7 +65,7 @@ public class ItemListInventory {
      */
     public void openNextPage() {
         page = Math.min(page+1, nPages-1);
-        openCurrentPage();
+        this.replace(createInventory());
     }
 
 
@@ -95,7 +78,7 @@ public class ItemListInventory {
      */
     public void openPrevPage() {
         page = Math.max(page-1, 0);
-        openCurrentPage();
+        this.replace(createInventory());
     }
 
 
@@ -109,12 +92,16 @@ public class ItemListInventory {
      */
     public void openAt(int page) {
         this.page = Math.min(Math.max(page, 0), nPages-1);
-        openCurrentPage();
+        this.replace(createInventory());
     }
 
 
-    private void openCurrentPage() {
-        if (page < 0 || page >= nPages) return;
+    /**
+     * 現在のページのインベントリを生成するにゃ！
+     * @since 1.1
+     */
+    protected Inventory createInventory() {
+        if (page < 0 || page >= nPages) return null;
         String pagePrefix = "§8(§e§l"+(page+1)+"§8/"+nPages+") §r";
         Inventory inv = Bukkit.createInventory(null, 54, pagePrefix+title);
 
@@ -125,7 +112,6 @@ public class ItemListInventory {
 
         if (page > 0)
             inv.setItem(45, Nyan10Utils.createItem(Material.STAINED_GLASS_PANE, 6, "§c前のページ", "§e"+(page)+"§7/"+nPages));
-
         int min = 0;
         for(int i=0; i<7; i++) {
             int max = (int)(((nPages-1)/6.0)*(i+1));
@@ -135,10 +121,8 @@ public class ItemListInventory {
 
         if (page < nPages-1)
             inv.setItem(53, Nyan10Utils.createItem(Material.STAINED_GLASS_PANE, 5, "§c次のページ", "§e"+(page+2)+"§7/"+nPages));
-
-        status = Status.PAGE_CHANGING;
-        player.openInventory(inv);
-        status = Status.OPEN;
+        
+        return inv;
     }
 
 
@@ -151,27 +135,12 @@ public class ItemListInventory {
      */
     @Deprecated
     public void select(int slot, ClickType type) {
-    	if (status == Status.CLOSED) return;
         int index = (page*45)+slot;
         if (index<0 || slot>items.size()) return;
-        status = Status.CLOSED;
         ItemStack item = items.get(index);
         ItemSelectEvent event = new ItemSelectEvent(item, index, type);
         handler.accept(event);
-        Bukkit.getScheduler().runTaskLater(Nyan10Utils.getInstance(), () -> {
-        	player.closeInventory();
-        }, 1);
-    }
-
-
-    /**
-     * 強制的にGUIを閉じるにゃ！注意にゃんですけど、閉じたら再利用はもうできないにゃ！
-     * にゃお、選択時の処理は実行されないにゃ～！
-     * @since 1.0
-     */
-    public void close() {
-        status = Status.CLOSED;
-        player.closeInventory();
+        close();
     }
 
 
@@ -229,23 +198,36 @@ public class ItemListInventory {
 
 
     /**
-     * 全ページの数を返すにゃ！
-     * @return ページ数
+     * 総ページ数を返すにゃ！
+     * @return 総ページ数
      * @since 1.0
      */
     public int getNPages() {
         return nPages;
     }
-
-
+    
+    
     /**
-     * このインスタンスの状態を返すにゃ！...あんまり使うことないかもにゃw
-     * @return ステータス
-     * @since 1.0
+     * @since 1.1
      */
-    public Status getStatus() {
-        return status;
-    }
+    @Override
+    public void onClickInventory(InventoryClickEvent e) {
+    	e.setCancelled(true);
+    	
+    	if (e.getSlotType() == SlotType.CONTAINER && e.getCurrentItem().getType() != Material.AIR) {
+	    	int slot = e.getRawSlot();
+	    	
+	        if (slot >= 0 && slot < 45) {
+	            select(slot, e.getClick());
+	        } else if (slot == 45) {
+	            openPrevPage();
+	        } else if (slot > 45 && slot < 53) {
+	            openAt((int)(((getNPages()-1)/6.0)*(slot-46)));
+	        } else if (slot == 53) {
+	            openNextPage();
+	        }
+    	}
+	}
 
 
 
@@ -296,21 +278,6 @@ public class ItemListInventory {
         public ClickType getType() {
             return type;
         }
-
-    }
-
-
-
-
-    /**
-     * ItemListInventoryのインスタンスの状態を示すやつにゃ！w
-     * @since 1.0
-     */
-    public static enum Status {
-
-        OPEN,
-        PAGE_CHANGING,
-        CLOSED;
 
     }
 
