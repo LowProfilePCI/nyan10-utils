@@ -19,6 +19,7 @@ nyan10で使う機能や便利な機能を詰め込んだSpigot1.12.2用のラ�
       <groupId>moe.nyan10</groupId>
       <artifactId>nyan10-utils</artifactId>
       <version>1.0</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 ```
@@ -48,4 +49,12 @@ listinv.setOnSelect(e -> {
   Nyan10Utils.giveItem(player, e.getItem());
 });
 ```
-こんな感じで...動くはずにゃ...動いてにゃ...(人>ω•*)ｵﾈｶﾞｲ
+こんな感じで...動くはずにゃ...動いてにゃ...(人>ω•*)ｵﾈｶﾞｲ  
+# 更新履歴
+## v1.0(非推奨)
+  - 便利機能いっぱい追加にゃ！
+## v1.1
+  - **v1.0との互換性はほとんどなくなったにゃ...**
+  - ItemListInventoryの改良
+  - 簡単にダイアログを作れるDialogInventoryの追加
+  - データベース管理システムの追加
