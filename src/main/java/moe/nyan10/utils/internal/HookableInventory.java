@@ -40,6 +40,7 @@ public abstract class HookableInventory {
 	public final void open() {
 		player.closeInventory();
 		this.inv = createInventory();
+		if (inv == null) return;
 		Nyan10Utils.getInstance().getEventListener().hook(player, this);
 		player.openInventory(inv);
 	}

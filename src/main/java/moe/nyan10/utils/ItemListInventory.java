@@ -101,10 +101,10 @@ public class ItemListInventory extends HookableInventory {
      * @since 1.1
      */
     protected Inventory createInventory() {
-        if (page < 0 || page >= nPages) return null;
         String pagePrefix = "§8(§e§l"+(page+1)+"§8/"+nPages+") §r";
         Inventory inv = Bukkit.createInventory(null, 54, pagePrefix+title);
-
+        if (page < 0 || page >= nPages) return inv;
+        
         final int OFFSET = page*45;
         final int LIMIT = Math.min(45-((OFFSET+45)-items.size()), 45);
         for(int i=0; i<LIMIT; i++)

@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>moe.nyan10</groupId>
   <artifactId>nyan10-utils</artifactId>
-  <version>1.1</version>
+  <version>1.1.1</version>
   <name>Nyan10Utils</name>
   <description>plugin/library for spigot 1.12.2</description>
 
