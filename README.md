@@ -58,3 +58,5 @@ listinv.setOnSelect(e -> {
   - ItemListInventoryの改良
   - 簡単にダイアログを作れるDialogInventoryの追加
   - データベース管理システムの追加
+## v1.1.1
+  - ItemListInventoryのアイテム数が0の際に発生するエラーの修正
