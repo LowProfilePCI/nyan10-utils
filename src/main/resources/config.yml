@@ -1,12 +1,18 @@
 database:
+  default-timeout-time: 1
+  enable-exec-cmd: true
+  show-password: false
+  print-exception-by-ping: true
   list:
     local: 
       url: jdbc:sqlite:local_db.sqlite
       user: 
       password: 
+      timeout-time: -1
+      alive-monitoring: -1
     remote: 
       url: 
       user: 
       password: 
-  enable-exec-cmd: true
-  show-password: false
+      timeout-time: 3
+      alive-monitoring: 600

@@ -5,6 +5,8 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +33,7 @@ import moe.nyan10.utils.internal.EventListener;
  */
 public class Nyan10Utils extends JavaPlugin {
 
-    private static final String PREFIX = "§7§l[§dNyan10§aUtils§7§l]§r ";
+    static final String PREFIX = "§7§l[§dNyan10§aUtils§7§l]§r ";
     private static Nyan10Utils instance;
     private EventListener listener = new EventListener();
 
@@ -48,10 +50,7 @@ public class Nyan10Utils extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(listener, this);
 
-        saveDefaultConfig();
-        config = getConfig();
-        showPassword = config.getBoolean("database.show-password", false);
-        enableExecCmd = config.getBoolean("database.enable-exec-cmd", false);
+        loadConfig();
     }
 
 
@@ -67,11 +66,13 @@ public class Nyan10Utils extends JavaPlugin {
             if (args.length == 0) {
                 sender.sendMessage(
                 		PREFIX+"§6/nyan10utils version: バージョンを表示するにゃ！\n"+
-                		PREFIX+"§6/nyan10utils show-pw [on|off]: DBのパスワード表示ポリシーを設定するにゃ！\n"+
-                		PREFIX+"§6/nyan10utils get-db [登録名]: データベースの情報を表示するにゃ！\n"+
-    					PREFIX+"§6/nyan10utils register-db <登録名> <URL> [USER] [PW]: データベースを登録するにゃ！\n"+
-                		PREFIX+"§6/nyan10utils remove-db <登録名>: データベースの登録を解除するにゃ！\n"+
-                		PREFIX+"§6/nyan10utils rename-db <登録名> <新しい登録名>: データベースの登録名を変更するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils reload: 設定を再読み込みするにゃ！\n"+
+                		PREFIX+"§6/nyan10utils show-pw [on|off]: DBのパスワード表示設定をするにゃ！\n"+
+                		PREFIX+"§6/nyan10utils get-db [DB名]: データベースの情報を表示するにゃ！\n"+
+    					PREFIX+"§6/nyan10utils register-db <DB名> <URL> [USER] [PW]: データベースを登録するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils remove-db <DB名>: データベースの登録を解除するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils rename-db <DB名> <DB名>: データベースの登録名を変更するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils ping-db <DB名>: データベースの応答速度を測定するにゃ！\n"+
     					(enableExecCmd ? PREFIX+"§6/nyan10utils exec-db <登録名> <SQL>: ローカルデータベースにSQLコマンドを送信するにゃ！":"")
                 );
             } else {
@@ -92,6 +93,10 @@ public class Nyan10Utils extends JavaPlugin {
                 			sender.sendMessage(PREFIX+"§cこの設定はコンソールからしか変更できないにゃ(*- -)(*_ _)ペコリ");
                 		}
                 	}
+                	
+                } else if (args[0].equalsIgnoreCase("reload") && Nyan10Utils.pCheck(sender, "nyan10utils.reload")) {
+                	loadConfig();
+                	sender.sendMessage(PREFIX+"§a設定ファイルを再読み込みしたにゃ！");
 
                 } else if (args[0].equalsIgnoreCase("register-db") && Nyan10Utils.pCheck(sender, "nyan10utils.regdb")) {
                 	if (args.length < 3) {
@@ -110,8 +115,11 @@ public class Nyan10Utils extends JavaPlugin {
                 } else if (args[0].equalsIgnoreCase("get-db") && Nyan10Utils.pCheck(sender, "nyan10utils.getdb")) {
             		if (args.length < 2) {
             			StringBuilder builder = new StringBuilder(PREFIX+"登録されているデータベース一覧にゃ！");
-                    	for(Entry<String, Database> db : Database.getAll().entrySet())
+                    	for(Entry<String, Database> db : Database.getAll().entrySet()) {
                     		builder.append("\n§e").append(db.getKey()).append("§f: §a").append(db.getValue().getUrl());
+                    		if (db.getValue().getAliveMonitoring() > 0)
+                    			builder.append("§f(").append(db.getValue().getLastResponseTime()).append("ms)");
+                    	}
                     	sender.sendMessage(builder.toString());
             			return true;
             		}
@@ -121,10 +129,12 @@ public class Nyan10Utils extends JavaPlugin {
 	                			PREFIX+"データベース§e"+args[1]+"§fの設定にゃ！\n"+
 			                	PREFIX+"§bURL: §f"+db.getUrl()+"\n"+
 			                	PREFIX+"§bUser: §f"+db.getUsername()+"\n"+
-			                	PREFIX+"§bPassword: §f"+(showPassword ? db.getPassword() : "********")+"\n"
+			                	PREFIX+"§bPassword: §f"+(showPassword ? db.getPassword() : "********")+"\n"+
+			                	PREFIX+"§b死活監視: "+(db.getAliveMonitoring()>0 ? "§a"+db.getAliveMonitoring()+"秒ごと" : "§c無効")+"\n"+
+			                	PREFIX+"§b応答速度: "+(db.getLastPingedTime()==-1 ? "§c利用不可" : "§a"+db.getLastResponseTime()+"ms"+"§7("+LocalDateTime.ofEpochSecond(db.getLastPingedTime()/1000, 0, OffsetDateTime.now().getOffset())+")")
 	                	);
                 	} else {
-                		sender.sendMessage(PREFIX+"§e"+args[1]+"§cは見つからなかったにゃ(´・ω・`)");
+                		sender.sendMessage(PREFIX+"§cデータベース§e"+args[1]+"§cが見つからなかったにゃ(´・ω・`)");
                 	}
 
                 } else if (args[0].equalsIgnoreCase("exec-db") && Nyan10Utils.pCheck(sender, "nyan10utils.execdb")) {
@@ -162,7 +172,7 @@ public class Nyan10Utils extends JavaPlugin {
                 	}
                 	Database db = Database.get(args[1]);
                 	if (db == null) {
-                		sender.sendMessage(PREFIX+"§e"+args[1]+"が見つからなかったにゃ(´・ω・`)");
+                		sender.sendMessage(PREFIX+"§cデータベース§e"+args[1]+"§cが見つからなかったにゃ(´・ω・`)");
                 	} else {
                 		Database.unregister(args[1]);
                 		Database.register(args[2], db);
@@ -179,6 +189,25 @@ public class Nyan10Utils extends JavaPlugin {
                 	else
                 		sender.sendMessage(PREFIX+"§e"+args[1]+"§cが見つからなかったにゃ(´・ω・`)");
                 	
+                } else if (args[0].equalsIgnoreCase("ping-db") && Nyan10Utils.pCheck(sender, "nyan10utils.pingdb")) {
+                	if (args.length < 2) {
+                		sender.sendMessage(PREFIX+"§c/nyan10utils ping-db <DB名>");
+                		return true;
+                	}
+                	Database db = Database.get(args[1]);
+                	if (db == null) {
+                		sender.sendMessage(PREFIX+"§cデータベース§e"+args[1]+"§cが見つからなかったにゃ(´・ω・`)");
+                	} else {
+                		new Thread(() -> {
+                			db.ping();
+                			if (db.getLastResponseTime() == -1)
+                				sender.sendMessage(PREFIX+"§cデータベース§e"+args[1]+"§cに接続できなかったにゃ...");
+                			else
+                				sender.sendMessage(PREFIX+"§aデータベース§e"+args[1]+"§aの応答速度: §e"+db.getLastResponseTime()+"§ams");
+                		}).start();
+                	}
+                	
+                	
                 } else {
                 	sender.sendMessage(PREFIX+"§c使い方が間違ってるみたいにゃ.../nyan10utilsで使い方表示にゃ！");
                 }
@@ -186,6 +215,20 @@ public class Nyan10Utils extends JavaPlugin {
             }
         }
         return true;
+    }
+    
+    
+    /**
+     * Nyan10Utilsのコンフィグを再読み込みするにゃ！
+     * @since 1.2
+     */
+    public void loadConfig() {
+    	saveDefaultConfig();
+    	reloadConfig();
+        config = getConfig();
+        showPassword = config.getBoolean("database.show-password", false);
+        enableExecCmd = config.getBoolean("database.enable-exec-cmd", false);
+        Database.load();
     }
 
 

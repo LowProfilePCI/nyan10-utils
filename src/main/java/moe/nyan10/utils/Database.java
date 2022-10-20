@@ -6,9 +6,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 
 /**
  * プラグイン間でデータベース接続を共有することで管理とかリソース面で改善しちゃおう大作戦なのにゃ！！
@@ -17,23 +18,27 @@ import org.bukkit.configuration.file.FileConfiguration;
  */
 public class Database implements AutoCloseable {
 
-	private static final int TIMEOUT_PERIOD = 3;//sec
 	private static Map<String, Database> databases = new HashMap<>();
-	private static FileConfiguration config = Nyan10Utils.getInstance().getConfig();
-
+	private static int defaultTimeout = 3;//sec
+	private static Timer timer = new Timer();
+	private static boolean printExceptionByPing;
 	private String url;
 	private String user;
 	private String password;
 	private Connection conn;
+	private int timeout = defaultTimeout;
+	private long lastPing = -1;
+	private int responseTime = -1;
+	private int aliveMonitoring = -1;
+	private TimerTask task = new TimerTask() {
+		@Override
+		public void run() {
+			ping();
+		}
+	};
 
 
 	static {
-		ConfigurationSection dbList = config.getConfigurationSection("database.list");
-		for(String name : dbList.getKeys(false)) {
-			ConfigurationSection dbConf = dbList.getConfigurationSection(name);
-			databases.put(name, new Database(dbConf.getString("url"), dbConf.getString("user"), dbConf.getString("password")));
-		}
-
 		try {
 			Class.forName("org.postgresql.Driver");
 		} catch (ClassNotFoundException e) {
@@ -48,12 +53,30 @@ public class Database implements AutoCloseable {
 	 * @param userName ユーザー名
 	 * @param password パスワード
 	 * @since 1.1
-	 * @throws SQLException
 	 */
 	public Database(String url, String user, String password) {
 		this.url = url;
 		this.user = user;
 		this.password = password;
+	}
+	
+	
+	/**
+	 * データベースに接続するにゃ
+	 * @param url データベースのURL。
+	 * @param userName ユーザー名
+	 * @param password パスワード
+	 * @param timeoutTime タイムアウト時間(0以下でデフォルト値)
+	 * @param aliveMonitoring 死活監視間隔(0以下で無効)
+	 * @since 1.2
+	 */
+	public Database(String url, String user, String password, int timeoutTime, int aliveMonitoring) {
+		this(url, user, password);
+		if (timeoutTime > 0)
+			this.timeout = timeoutTime;
+		this.aliveMonitoring = aliveMonitoring;
+		if (aliveMonitoring > 0)
+			timer.schedule(task, 0, aliveMonitoring*1000);
 	}
 
 
@@ -65,7 +88,7 @@ public class Database implements AutoCloseable {
 	 * @throws SQLException
 	 */
 	public Connection getConnection() throws SQLException {
-		if (conn != null && conn.isValid(TIMEOUT_PERIOD)) {
+		if (conn != null && conn.isValid(timeout)) {
 			return conn;
 		} else {
 			conn = DriverManager.getConnection(url, user, password);
@@ -114,6 +137,72 @@ public class Database implements AutoCloseable {
 	public String getPassword() {
 		return password;
 	}
+	
+	
+	/**
+	 * タイムアウト時間を秒単位で返すにゃ！
+	 * @return タイムアウト時間(秒)
+	 * @since 1.2
+	 */
+	public int getTimeoutTime() {
+		return timeout;
+	}
+	
+	
+	/**
+	 * 死活監視の間隔を返すにゃ！
+	 * 死活監視が無効の場合は0以下の数値を返すにゃ！
+	 * @return 死活監視の間隔(秒)
+	 * @since 1.2
+	 */
+	public int getAliveMonitoring() {
+		return aliveMonitoring;
+	}
+	
+	
+	/**
+	 * 最後の死活監視の応答速度を返すにゃ！
+	 * データベースに接続できなかった場合やデータがない場合は-1を返すにゃ！
+	 * @return 応答速度(ms)
+	 * @since 1.2
+	 */
+	public int getLastResponseTime() {
+		return responseTime;
+	}
+	
+	
+	/**
+	 * 最後に{@link #ping()}をした時間を返すにゃ！
+	 * 時間は{@link System#currentTimeMillis()}に依存するにゃ！
+	 * まだ一度もpingを実行していない場合は-1を返すにゃ！
+	 * @return 最後にpingを実行した時間
+	 * @since 1.2
+	 */
+	public long getLastPingedTime() {
+		return lastPing;
+	}
+	
+	
+	/**
+	 * 死活監視をするためにpingを投げるにゃ！
+	 * 応答速度を取得するには{@link #getLastResponseTime()}を使ってにゃ！
+	 * @see #getLastResponseTime()
+	 * @since 1.2
+	 */
+	public void ping() {
+		this.lastPing = System.currentTimeMillis();
+		try(Statement stmt = createStatement()) {
+			long start = System.nanoTime();
+			stmt.execute("SELECT 1");
+			responseTime = (int)(System.nanoTime()-start)/1000000;
+		} catch (SQLException e) {
+			responseTime = -1;
+			if (printExceptionByPing)
+				e.printStackTrace();
+			else
+				Nyan10Utils.getInstance().getLogger().severe(url+"に接続できなかったにゃ！");
+		}
+	}
 
 
 	/**
@@ -135,10 +224,12 @@ public class Database implements AutoCloseable {
 	 */
 	public static void register(String name, Database db) {
 		databases.put(name, db);
-		ConfigurationSection dbconf = config.getConfigurationSection("database.list").createSection(name);
+		ConfigurationSection dbconf = Nyan10Utils.getInstance().getConfig().getConfigurationSection("database.list").createSection(name);
 		dbconf.set("url", db.getUrl());
 		dbconf.set("user", db.getUsername());
 		dbconf.set("password", db.getPassword());
+		dbconf.set("timeout-time", db.getTimeoutTime());
+		dbconf.set("alive-monitoring", db.getAliveMonitoring());
 		Nyan10Utils.getInstance().saveConfig();
 	}
 	
@@ -150,7 +241,7 @@ public class Database implements AutoCloseable {
 	 * @since 1.1
 	 */
 	public static Database unregister(String name) {
-		config.set("database.list."+name, null);
+		Nyan10Utils.getInstance().getConfig().set("database.list."+name, null);
 		Nyan10Utils.getInstance().saveConfig();
 		return databases.remove(name);
 	}
@@ -185,6 +276,19 @@ public class Database implements AutoCloseable {
 	 */
 	public static boolean has(String name) {
 		return databases.containsKey(name);
+	}
+	
+	
+	static void load() {
+		databases.clear();
+		timer.purge();
+		printExceptionByPing = Nyan10Utils.getInstance().getConfig().getBoolean("database.print-exception-by-ping", true);
+		defaultTimeout = Nyan10Utils.getInstance().getConfig().getInt("database.default-timeout-time", 3);
+		ConfigurationSection dbList = Nyan10Utils.getInstance().getConfig().getConfigurationSection("database.list");
+		for(String name : dbList.getKeys(false)) {
+			ConfigurationSection dbConf = dbList.getConfigurationSection(name);
+			databases.put(name, new Database(dbConf.getString("url"), dbConf.getString("user"), dbConf.getString("password"), dbConf.getInt("timeout-time", -1), dbConf.getInt("alive-monitoring", -1)));
+		}
 	}
 	
 }
