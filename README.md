@@ -18,7 +18,7 @@ nyan10で使う機能や便利な機能を詰め込んだSpigot1.12.2用のラ�
     <dependency>
       <groupId>moe.nyan10</groupId>
       <artifactId>nyan10-utils</artifactId>
-      <version>1.1</version>
+      <version>1.2</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -60,3 +60,6 @@ listinv.setOnSelect(e -> {
   - データベース管理システムの追加
 ## v1.1.1
   - ItemListInventoryのアイテム数が0の際に発生するエラーの修正
+## v1.2
+  - データベースのタイムアウト時間を設定できるようにしたにゃ！
+  - データベース死活監視機能の追加にゃ！
