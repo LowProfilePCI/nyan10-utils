@@ -1,5 +1,35 @@
 # nyan10-utils
 nyan10で使う機能や便利な機能を詰め込んだSpigot1.12.2用のライブラリ兼プラグインにゃ！
+# コマンド
+## /nyan10utils version
+Nyan10Utilsプラグインのバージョンを表示するにゃ！
+## /nyan10utils reload
+Nyan10Utilsプラグインの設定を再読み込みするにゃ！  
+普通の/reloadコマンドなどは使えにゃいので、このコマンドを使ってにゃ！
+## /nyan10utils show-pw [on|off]
+データベースのパスワードを表示/非表示に設定するにゃ！
+[on|off]を省略すると現在の設定を表示するにゃ！
+## /nyan10utils get-db [DB名]
+データベースの現在の情報を表示するにゃ！  
+[DB名]を省略するとデータベース一覧が表示されるにゃ！
+## /nyan10utils register-db <DB名> <URL> [ユーザー名] [パスワード]
+データベースを登録するにゃ！  
+**データベースはSQLiteとPostgreSQLのみサポートにゃ！**  
+<URL>はスキーム名等も含めたURLにゃ！`jdbc:`から始まるにゃ！   
+ SQLiteの例)jdbc:sqlite:neko-db.sqlite  
+ PostgreSQLの例)jdbc:postgresql://example.com/neko-db  
+[ユーザー名]と[パスワード]がないデータベースの場合は省略できるにゃー
+## /nyan10utils remove-db <DB名>
+データベースの登録を解除するにゃ！
+## /nyan10utils rename-db <DB名> <新しいDB名>
+データベース名を変更するにゃ！
+## /nyan10utils ping-db <DB名>
+データベースの応答速度を測定するにゃ！(v1.2～)
+## /nyan10utils exec-db <DB名> <SQL文>
+データベースにSQL文をそのまま送るにゃ！  
+UPDATE/INSERT/DELETE等は更新行数、SELECTは結果が表示されるにゃ！  
+**config.ymlの`database.enable-exec-cmd`を`true`にしないと使えないにゃ！**
+
 # 導入方法
 サーバーのpluginsにダウンロードしたjarファイルを入れてサーバーを再起動かリロードするにゃ！
 # 開発猫や開発者へ！
@@ -18,7 +48,7 @@ nyan10で使う機能や便利な機能を詰め込んだSpigot1.12.2用のラ�
     <dependency>
       <groupId>moe.nyan10</groupId>
       <artifactId>nyan10-utils</artifactId>
-      <version>1.1</version>
+      <version>1.2.1</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -60,3 +90,9 @@ listinv.setOnSelect(e -> {
   - データベース管理システムの追加
 ## v1.1.1
   - ItemListInventoryのアイテム数が0の際に発生するエラーの修正
+## v1.2
+  - データベースのタイムアウト時間を設定できるようにしたにゃ！
+  - データベース死活監視機能の追加にゃ！
+## v1.2.1
+  - ソースの添付をしたにゃ！使い方とか見れる...はずにゃ！
+  - 誤字の修正をしたにゃ(*ﾉωﾉ)
