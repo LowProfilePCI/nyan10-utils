@@ -48,7 +48,7 @@ UPDATE/INSERT/DELETE等は更新行数、SELECTは結果が表示されるにゃ
     <dependency>
       <groupId>moe.nyan10</groupId>
       <artifactId>nyan10-utils</artifactId>
-      <version>1.2</version>
+      <version>1.2.1</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -93,3 +93,6 @@ listinv.setOnSelect(e -> {
 ## v1.2
   - データベースのタイムアウト時間を設定できるようにしたにゃ！
   - データベース死活監視機能の追加にゃ！
+## v1.2.1
+  - ソースの添付をしたにゃ！使い方とか見れる...はずにゃ！
+  - 誤字の修正をしたにゃ(*ﾉωﾉ)
