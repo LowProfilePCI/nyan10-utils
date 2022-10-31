@@ -4,7 +4,7 @@
   <groupId>moe.nyan10</groupId>
   <artifactId>nyan10-utils</artifactId>
   <name>Nyan10Utils</name>
-  <version>1.2</version>
+  <version>1.2.2</version>
   <description>plugin/library for spigot 1.12.2</description>
   <build>
     <resources>
@@ -35,6 +35,17 @@
             <configuration>
               <minimizeJar>true</minimizeJar>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>

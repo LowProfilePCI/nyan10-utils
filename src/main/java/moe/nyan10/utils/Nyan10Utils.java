@@ -1,6 +1,8 @@
 package moe.nyan10.utils;
 
 import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -9,6 +11,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -47,6 +50,13 @@ public class Nyan10Utils extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        
+        System.out.println("利用可能なJDBCドライバ:");
+		Enumeration<Driver> drivers = DriverManager.getDrivers();
+		while(drivers.hasMoreElements()) {
+			Driver driver = drivers.nextElement();
+			System.out.println("  "+driver.getClass().getCanonicalName()+" / "+driver.getMajorVersion()+"."+driver.getMinorVersion());
+		}
 
         getServer().getPluginManager().registerEvents(listener, this);
 
@@ -56,7 +66,7 @@ public class Nyan10Utils extends JavaPlugin {
 
     @Override
     public void onDisable() {
-
+    	
     }
 
 
@@ -71,9 +81,9 @@ public class Nyan10Utils extends JavaPlugin {
                 		PREFIX+"§6/nyan10utils get-db [DB名]: データベースの情報を表示するにゃ！\n"+
     					PREFIX+"§6/nyan10utils register-db <DB名> <URL> [USER] [PW]: データベースを登録するにゃ！\n"+
                 		PREFIX+"§6/nyan10utils remove-db <DB名>: データベースの登録を解除するにゃ！\n"+
-                		PREFIX+"§6/nyan10utils rename-db <DB名> <DB名>: データベースの登録名を変更するにゃ！\n"+
+                		PREFIX+"§6/nyan10utils rename-db <DB名> <新DB名>: データベースの登録名を変更するにゃ！\n"+
                 		PREFIX+"§6/nyan10utils ping-db <DB名>: データベースの応答速度を測定するにゃ！\n"+
-    					(enableExecCmd ? PREFIX+"§6/nyan10utils exec-db <登録名> <SQL>: ローカルデータベースにSQLコマンドを送信するにゃ！":"")
+    					(enableExecCmd ? PREFIX+"§6/nyan10utils exec-db <DB名> <SQL>: ローカルデータベースにSQLコマンドを送信するにゃ！":"")
                 );
             } else {
 

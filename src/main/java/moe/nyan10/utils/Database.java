@@ -1,9 +1,11 @@
 package moe.nyan10.utils;
 
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -40,7 +42,14 @@ public class Database implements AutoCloseable {
 
 	static {
 		try {
+			Class.forName("org.sqlite.JDBC");
 			Class.forName("org.postgresql.Driver");
+			System.out.println(Nyan10Utils.PREFIX+"利用可能なJDBCドライバ:");
+			Enumeration<Driver> drivers = DriverManager.getDrivers();
+			while(drivers.hasMoreElements()) {
+				Driver driver = drivers.nextElement();
+				System.out.println("  "+driver.getClass().getCanonicalName()+" / "+driver.getMajorVersion()+"."+driver.getMinorVersion());
+			}
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
